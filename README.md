@@ -2,7 +2,7 @@
 
 基于 [Langflow](https://github.com/langflow-ai/langflow) 的可视化流程与组件体系，增加从客户工单契约到独立审批、ServiceNow 写回和持久化回执的交付模块。
 
-[![Enterprise CI](https://github.com/hfeiuhog/servicebridge-langflow/actions/workflows/enterprise-ci.yml/badge.svg?branch=enterprise)](https://github.com/hfeiuhog/servicebridge-langflow/actions/workflows/enterprise-ci.yml)
+[![Enterprise CI](https://github.com/hfeiuhog/servicebridge-delivery/actions/workflows/enterprise-ci.yml/badge.svg?branch=enterprise)](https://github.com/hfeiuhog/servicebridge-delivery/actions/workflows/enterprise-ci.yml)
 
 ## 从演示到可交付集成
 
