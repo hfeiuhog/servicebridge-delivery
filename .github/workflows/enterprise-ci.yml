@@ -1,0 +1,29 @@
+name: Enterprise extension CI
+on:
+  workflow_dispatch:
+  push:
+    branches: [enterprise]
+    paths: ['enterprise/**', 'src/lfx/src/lfx/components/enterprise_delivery/**', 'src/lfx/src/lfx/components/__init__.py', '.github/workflows/enterprise-ci.yml']
+permissions:
+  contents: read
+jobs:
+  delivery-contracts:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: ci, POSTGRES_PASSWORD: synthetic-ci-only, POSTGRES_DB: enterprise_ci}
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PYTHONPATH: src/lfx/src
+      TEST_DATABASE_URL: postgresql+psycopg://ci:synthetic-ci-only@localhost:5432/enterprise_ci
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: '3.12'}
+      - run: uv venv
+      - run: uv pip install -e src/lfx pytest pytest-asyncio 'psycopg[binary]'
+      - run: uv run --no-project pytest -p pytest_asyncio.plugin -o addopts='' -o asyncio_mode=auto enterprise/tests -q
+      - run: uv run --no-project python enterprise/component_smoke.py

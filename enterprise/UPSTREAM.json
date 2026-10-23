@@ -1,0 +1,8 @@
+{
+  "project": "ServiceBridge",
+  "upstream": "https://github.com/langflow-ai/langflow",
+  "base_commit": "aeb10d96bb2ea797696613af931e91ddf51f3320",
+  "extension_branch": "enterprise",
+  "scope": "企业售后工单从数据契约到审批写回的交付闭环",
+  "assisted_implementation": true
+}

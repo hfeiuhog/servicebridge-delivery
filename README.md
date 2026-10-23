@@ -1,109 +1,40 @@
-<!-- markdownlint-disable MD030 -->
+# ServiceBridge · 企业售后智能体交付平台
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/static/img/langflow-logo-color-blue-bg.svg">
-  <img src="./docs/static/img/langflow-logo-color-black-solid.svg" alt="Langflow logo">
-</picture>
+基于 [Langflow](https://github.com/langflow-ai/langflow) 的可视化流程与组件体系，增加从客户工单契约到独立审批、ServiceNow 写回和持久化回执的交付模块。
 
-[![Release Notes](https://img.shields.io/github/release/langflow-ai/langflow?style=flat-square)](https://github.com/langflow-ai/langflow/releases)
-[![PyPI - License](https://img.shields.io/badge/license-MIT-orange)](https://opensource.org/licenses/MIT)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/langflow?style=flat-square)](https://pypistats.org/packages/langflow)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow-ai.svg?style=social&label=Follow%20%40Langflow)](https://twitter.com/langflow_ai)
-[![YouTube Channel](https://img.shields.io/badge/Subscribe-red?logo=youtube&logoColor=white)](https://www.youtube.com/@Langflow)
-[![Discord Server](https://img.shields.io/discord/1116803230643527710?logo=discord&style=social&label=Join)](https://discord.gg/EqksyE2EX9)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/langflow-ai/langflow)
+[![Enterprise CI](https://github.com/hfeiuhog/servicebridge-langflow/actions/workflows/enterprise-ci.yml/badge.svg?branch=enterprise)](https://github.com/hfeiuhog/servicebridge-langflow/actions/workflows/enterprise-ci.yml)
 
-[Langflow](https://langflow.org) is a powerful platform for building and deploying AI-powered agents and workflows. It provides developers with both a visual authoring experience and built-in API and MCP servers that turn every workflow into a tool that can be integrated into applications built on any framework or stack. Langflow comes with batteries included and supports all major LLMs, vector databases and a growing library of AI tools.
+## 从演示到可交付集成
 
-## ✨ Highlight features
+| 上游提供 | 本次新增 |
+|---|---|
+| Langflow 可视化 Agent/RAG 编排与模型组件 | Enterprise Delivery 三个注册组件 |
+| Python 组件、Data 输入输出与流程执行身份 | 字段映射、严格工单契约、联系方式清理 |
+| 上游 SSRF 校验与 DNS 固定传输工具 | 按执行用户/租户授权的运营方连接配置 |
+| 完整前后端平台 | 外部 Ed25519 审批、PostgreSQL 交付日志、ServiceNow Incident 写回 |
 
-- **Visual builder interface** to quickly get started and iterate.
-- **Source code access** lets you customize any component using Python.
-- **Interactive playground** to immediately test and refine your flows with step-by-step control.
-- **Multi-agent orchestration** with conversation management and retrieval.
-- **Deploy as an API** or export as JSON for Python apps.
-- **Deploy as an MCP server** and turn your flows into tools for MCP clients.
-- **Observability** with LangSmith, LangFuse and other integrations.
-- **Enterprise-ready** security and scalability.
-
-## 🖥️  Langflow Desktop
-
-Langflow Desktop is the easiest way to get started with Langflow. All dependencies are included, so you don't need to manage Python environments or install packages manually.
-Available for Windows and macOS.
-
-[📥 Download Langflow Desktop](https://www.langflow.org/desktop)
-
-## ⚡️ Quickstart
-
-### Install locally (recommended)
-
-Requires Python 3.10–3.14 and [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended package manager).
-
-#### Install
-
-From a fresh directory, run:
-```shell
-uv pip install langflow -U
+```mermaid
+flowchart LR
+  A[客户数据] --> B[Ticket Contract]
+  B --> C[Prepare Change / 无外部写入]
+  C --> D[独立审批服务签名]
+  D --> E[ServiceNow Writeback]
+  E --> F[PostgreSQL 交付日志]
+  E --> G[ServiceNow Incident]
 ```
 
-The latest Langflow package is installed.
-For more information, see [Install and run the Langflow OSS Python package](https://docs.langflow.org/get-started-installation#install-and-run-the-langflow-oss-python-package).
+注册组件位于 `src/lfx/src/lfx/components/enterprise_delivery/`，通过上游组件目录加载。审批私钥不进入流程，执行侧仅配置公钥。写回前校验调用身份、租户、目标 audience、内容摘要和审批时效。
+日志用事务条件更新限制同一变更并发执行。POST 超时或无法确定结果时进入 uncertain，阻止盲目重试；先按 correlation_id 核对并人工处理。不会承诺跨系统 exactly-once。
 
-#### Run
+## 交付资料
 
-Official release packages and tagged source archives disable automatic login by default. Set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`). Development branches retain automatic login by default. See [authentication configuration](https://docs.langflow.org/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+- [需求访谈、接入、UAT 与回滚](enterprise/IMPLEMENTATION.md)
+- [合成客户工单](enterprise/samples/customer-ticket.json)
+- [验证范围](enterprise/VALIDATION.md) · [数据边界](enterprise/DATA_POLICY.md)
 
-To start Langflow, run:
-```shell
-uv run langflow run
-```
+按 [上游说明](README.upstream.md) 从本分支构建平台；部署本分支代码后，在组件目录选择三个 Enterprise 组件并按上述流程连线。先完成数据库建表与运营方 profile 配置。真实 ServiceNow 接入需客户提供测试租户和最小权限账号。
+Langflow OSS 的默认权限插件不等于完整企业 RBAC。本扩展在连接边界校验执行用户 allowlist；仍需强制登录、隔离运营配置/环境变量、限制自定义代码执行和平台管理权限。
 
-Langflow starts at http://127.0.0.1:7860.
+## 归属与许可
 
-That's it! You're ready to build with Langflow! 🎉
-
-## 📦 Other install options
-
-### Run from source
-If you've cloned this repository and want to contribute, run this command from the repository root:
-```shell
-make run_cli
-```
-For more information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
-
-### Docker
-Set and export a strong password before starting the container (Bash):
-```shell
-read -rsp "Langflow administrator password: " LANGFLOW_SUPERUSER_PASSWORD; echo
-export LANGFLOW_SUPERUSER_PASSWORD
-docker run -p 7860:7860 -e LANGFLOW_SUPERUSER_PASSWORD langflowai/langflow:latest
-```
-Langflow is available at http://localhost:7860/. Sign in as `langflow` with the password you entered. Official Docker images require authentication by default.
-If you already have an auto-login installation, follow the [upgrade instructions](https://docs.langflow.org/api-keys-and-authentication#upgrade-from-auto-login) before switching defaults.
-For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
-
-## 🛡️ Security
-
-For security information, see our [Security Policy](./SECURITY.md).
-
-## 🚀 Deployment
-
-Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to deploy Langflow, see our [Langflow deployment guides](https://docs.langflow.org/deployment-overview).
-
-## ⭐ Stay up-to-date
-
-Star Langflow on GitHub to be instantly notified of new releases.
-
-![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
-
-## 👋 Contribute
-
-We welcome contributions from developers of all levels. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
-
----
-
-[![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
-
-## ❤️ Contributors
-
-[![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
+个人开源二次开发，新增实现使用 AI 辅助。原有编排平台和组件能力属于 Langflow 及其贡献者；保留 MIT LICENSE、历史和 [原始 README](README.upstream.md)。新增贡献以 [固定基线](enterprise/UPSTREAM.json) 后的 diff 为准。
