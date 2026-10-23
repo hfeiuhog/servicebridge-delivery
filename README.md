@@ -37,4 +37,4 @@ Langflow OSS 的默认权限插件不等于完整企业 RBAC。本扩展在连�
 
 ## 归属与许可
 
-个人开源二次开发，新增实现使用 AI 辅助。原有编排平台和组件能力属于 Langflow 及其贡献者；保留 MIT LICENSE、历史和 [原始 README](README.upstream.md)。新增贡献以 [固定基线](enterprise/UPSTREAM.json) 后的 diff 为准。
+新增实现使用 AI 辅助。原有编排平台和组件能力属于 Langflow 及其贡献者；保留 MIT LICENSE、历史和 [原始 README](README.upstream.md)。新增贡献以 [固定基线](enterprise/UPSTREAM.json) 后的 diff 为准。
