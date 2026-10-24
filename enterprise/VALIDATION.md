@@ -22,7 +22,7 @@ TEST_DATABASE_URL 只能指向可丢弃的专用测试库，测试会 drop/creat
 uv pip install pytest pytest-asyncio 'psycopg[binary]' ruff
 $env:PYTHONPATH = 'src/lfx/src'
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
-uv run --no-project pytest -p pytest_asyncio.plugin -c enterprise/pytest.ini enterprise/tests -q
+uv run --no-project python -m pytest -p pytest_asyncio.plugin -c enterprise/pytest.ini enterprise/tests -q
 uv run --no-project ruff format --check src/lfx/src/lfx/components/enterprise_delivery enterprise
 uv run --no-project ruff check --select E4,E7,E9,F,I,UP,B src/lfx/src/lfx/components/enterprise_delivery enterprise
 ```
