@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import JSON, Column, MetaData, String, Table, UniqueConstraint, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from lfx.components.enterprise_delivery.contracts import DeliveryError
@@ -29,8 +29,14 @@ class Journal:
         self.engine = engine
 
     def prepare(self, change: dict[str, Any]) -> dict[str, Any]:
+        with self.engine.begin() as conn:
+            return self.prepare_in_transaction(conn, change)
+
+    @staticmethod
+    def prepare_in_transaction(conn: Connection, change: dict[str, Any]) -> dict[str, Any]:
+        """Allow confirmation freezing and preparation to share one transaction."""
         try:
-            with self.engine.begin() as conn:
+            with conn.begin_nested():
                 conn.execute(
                     insert(deliveries).values(
                         digest=change["digest"],
@@ -41,17 +47,17 @@ class Journal:
                     )
                 )
         except IntegrityError:
-            with self.engine.connect() as conn:
-                row = conn.execute(
-                    select(deliveries).where(
-                        deliveries.c.tenant == change["tenant"], deliveries.c.case_ref == change["case_ref"]
-                    )
-                ).first()
+            row = conn.execute(
+                select(deliveries).where(
+                    deliveries.c.tenant == change["tenant"], deliveries.c.case_ref == change["case_ref"]
+                )
+            ).first()
             if row is None or row.digest != change["digest"]:
                 raise DeliveryError(
                     "This customer case already has a different change; reconcile before revising"
                 ) from None
-        return self.get(change["digest"])
+        row = conn.execute(select(deliveries).where(deliveries.c.digest == change["digest"])).first()
+        return dict(row._mapping)
 
     def get(self, digest: str) -> dict[str, Any]:
         with self.engine.connect() as conn:

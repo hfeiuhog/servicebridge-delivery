@@ -8,17 +8,27 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.enterprise_delivery.nodes import (
+        EnterpriseConfirmTicket,
         EnterprisePrepareChange,
         EnterpriseServiceNowWriteback,
         EnterpriseTicketContract,
+        EnterpriseTicketIntake,
     )
 
 _dynamic_imports = {
+    "EnterpriseConfirmTicket": "nodes",
     "EnterprisePrepareChange": "nodes",
     "EnterpriseServiceNowWriteback": "nodes",
     "EnterpriseTicketContract": "nodes",
+    "EnterpriseTicketIntake": "nodes",
 }
-__all__ = ["EnterprisePrepareChange", "EnterpriseServiceNowWriteback", "EnterpriseTicketContract"]
+__all__ = [
+    "EnterpriseConfirmTicket",
+    "EnterprisePrepareChange",
+    "EnterpriseServiceNowWriteback",
+    "EnterpriseTicketContract",
+    "EnterpriseTicketIntake",
+]
 
 
 def __getattr__(name: str) -> Any:

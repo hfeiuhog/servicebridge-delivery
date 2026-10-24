@@ -10,20 +10,21 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 
-from lfx.custom.custom_component.component import Component
-from lfx.io import DataInput, DictInput, MessageTextInput, Output, SecretStrInput
-from lfx.schema.data import Data
-from lfx.utils.ssrf_protection import validate_and_resolve_url
-from lfx.utils.ssrf_transport import create_ssrf_protected_client, pin_host_for_url
+from lfx.components.enterprise_delivery.candidate_model import extract_candidate
+from lfx.components.enterprise_delivery.candidate_store import CandidateStore, prepare_flow_input
 from lfx.components.enterprise_delivery.connector import write_incident
 from lfx.components.enterprise_delivery.contracts import (
     ConnectionProfile,
     DeliveryError,
-    Ticket,
     normalize,
-    prepare_change,
 )
+from lfx.components.enterprise_delivery.deepseek_model import DeepSeekModel
 from lfx.components.enterprise_delivery.journal import Journal
+from lfx.custom.custom_component.component import Component
+from lfx.io import DataInput, DictInput, HandleInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
+from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_and_resolve_url
+from lfx.utils.ssrf_transport import create_ssrf_protected_client, pin_host_for_url
 
 
 def load_profile(name: str) -> ConnectionProfile:
@@ -75,13 +76,18 @@ class EnterprisePrepareChange(Component):
     async def prepare(self) -> Data:
         if self.user_id is None:
             raise DeliveryError("Authenticated execution context is required")
-        ticket = Ticket.model_validate(self.ticket.data)
         profile = load_profile(self.profile_name)
-        profile.authorize(str(self.user_id), ticket.tenant)
-        change = prepare_change(ticket, str(self.user_id), profile.audience)
         journal = journal_for(os.environ["SERVICEBRIDGE_DATABASE_URL"])
-        record = await asyncio.to_thread(journal.prepare, change)
-        return Data(data={"change": change, "state": record["state"], "external_write_performed": False})
+        record = await asyncio.to_thread(
+            prepare_flow_input,
+            journal,
+            self.ticket.data,
+            str(self.user_id),
+            self.profile_name,
+            profile,
+            allow_legacy=os.environ.get("SERVICEBRIDGE_ALLOW_LEGACY_UNCONFIRMED") == "true",
+        )
+        return Data(data={"change": record["payload"], "state": record["state"], "external_write_performed": False})
 
 
 class EnterpriseServiceNowWriteback(Component):
@@ -114,3 +120,84 @@ class EnterpriseServiceNowWriteback(Component):
                 journal, change, self.review_grant, profile, str(self.user_id), token, client
             )
         return Data(data=receipt)
+
+
+class EnterpriseTicketIntake(Component):
+    display_name = "Enterprise Ticket Intake"
+    description = "Generate an editable, source-grounded candidate. No external business write occurs."
+    icon = "ClipboardList"
+    name = "EnterpriseTicketIntake"
+    inputs = [
+        MultilineInput(name="source_text", display_name="Authorized Source Text", required=True),
+        MessageTextInput(name="profile_name", display_name="Provisioned Profile", required=True),
+        MessageTextInput(name="case_ref", display_name="Controlled Case Reference", required=True),
+        MessageTextInput(name="customer_ref", display_name="Controlled Customer Reference", required=True),
+        HandleInput(
+            name="language_model", display_name="Optional Language Model", input_types=["LanguageModel"], required=False
+        ),
+        MessageTextInput(name="draft_id", display_name="Draft ID to Revise", advanced=True),
+        IntInput(name="revision", display_name="Expected Revision", value=1, advanced=True),
+    ]
+    outputs = [Output(display_name="Candidate and Questions", name="draft", method="generate")]
+
+    async def generate(self) -> Data:
+        if self.user_id is None:
+            raise DeliveryError("Authenticated execution context is required")
+        actor = str(self.user_id)
+        profile = load_profile(self.profile_name)
+        profile.authorize(actor, profile.tenant)
+        store = CandidateStore(journal_for(os.environ["SERVICEBRIDGE_DATABASE_URL"]).engine)
+        draft_id = getattr(self, "draft_id", None)
+        if draft_id:
+            existing = await asyncio.to_thread(store.get, draft_id, actor, self.profile_name, profile)
+            if (existing["case_ref"], existing["customer_ref"]) != (self.case_ref, self.customer_ref):
+                raise DeliveryError("Create a new draft when controlled identifiers change")
+        model = getattr(self, "language_model", None)
+        if model is None and os.environ.get("DEEPSEEK_API_KEY"):
+            model = DeepSeekModel.from_env()
+        label = getattr(model, "model", None) or "connected-language-model"
+        result = await extract_candidate(self.source_text, model, model_label=str(label))
+        if draft_id:
+            record = await asyncio.to_thread(
+                store.revise, draft_id, self.revision, result, actor, self.profile_name, profile
+            )
+        else:
+            record = await asyncio.to_thread(
+                store.create, result, actor, self.profile_name, profile, self.case_ref, self.customer_ref
+            )
+        return Data(data=record)
+
+
+class EnterpriseConfirmTicket(Component):
+    display_name = "Enterprise Confirm Ticket"
+    description = "Persist an authenticated content confirmation bound to the current source revision."
+    icon = "UserCheck"
+    name = "EnterpriseConfirmTicket"
+    inputs = [
+        DataInput(name="draft", display_name="Current Candidate Draft", required=True),
+        DictInput(name="final_content", display_name="Reviewed Candidate and Human Urgency", required=True),
+        MessageTextInput(name="profile_name", display_name="Provisioned Profile", required=True),
+    ]
+    outputs = [Output(display_name="Persisted Confirmation", name="ticket", method="confirm")]
+
+    async def confirm(self) -> Data:
+        if self.user_id is None:
+            raise DeliveryError("Authenticated execution context is required")
+        profile = load_profile(self.profile_name)
+        store = CandidateStore(journal_for(os.environ["SERVICEBRIDGE_DATABASE_URL"]).engine)
+        record = await asyncio.to_thread(
+            store.confirm,
+            self.draft.data["id"],
+            self.draft.data["revision"],
+            self.final_content,
+            str(self.user_id),
+            self.profile_name,
+            profile,
+        )
+        return Data(
+            data={
+                "confirmation_id": record["confirmation_id"],
+                "draft_id": record["id"],
+                "revision": record["revision"],
+            }
+        )

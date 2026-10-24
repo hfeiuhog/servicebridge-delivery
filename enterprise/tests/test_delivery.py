@@ -5,8 +5,6 @@ import httpx
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from sqlalchemy import create_engine
-
 from lfx.components.enterprise_delivery.connector import write_incident
 from lfx.components.enterprise_delivery.contracts import (
     ConnectionProfile,
@@ -18,6 +16,7 @@ from lfx.components.enterprise_delivery.contracts import (
     verify_grant,
 )
 from lfx.components.enterprise_delivery.journal import Journal, metadata
+from sqlalchemy import create_engine
 
 
 @pytest.fixture

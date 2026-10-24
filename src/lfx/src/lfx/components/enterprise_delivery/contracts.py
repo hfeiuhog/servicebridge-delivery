@@ -72,7 +72,9 @@ def normalize(source: dict[str, Any], mapping: dict[str, str]) -> Ticket:
     return ticket.model_copy(update={"summary": scrub(ticket.summary), "detail": scrub(ticket.detail)})
 
 
-def prepare_change(ticket: Ticket, requester_id: str, audience: str) -> dict[str, Any]:
+def prepare_change(
+    ticket: Ticket, requester_id: str, audience: str, *, confirmation_id: str | None = None
+) -> dict[str, Any]:
     if not requester_id:
         raise DeliveryError("An authenticated execution user is required")
     payload: dict[str, Any] = {
@@ -88,6 +90,8 @@ def prepare_change(ticket: Ticket, requester_id: str, audience: str) -> dict[str
             "u_customer_reference": ticket.customer_ref,
         },
     }
+    if confirmation_id is not None:
+        payload["confirmation_id"] = confirmation_id
     # The custom customer field is not sent to ServiceNow by default.
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     payload["digest"] = digest

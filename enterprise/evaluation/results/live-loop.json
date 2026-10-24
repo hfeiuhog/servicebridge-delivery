@@ -1,0 +1,23 @@
+{
+  "source": "synthetic-only",
+  "model_run": {
+    "model": "deepseek-flash",
+    "prompt_version": "intake-v2",
+    "elapsed_ms": 2055.464,
+    "usage": {
+      "input_tokens": 799,
+      "output_tokens": 200,
+      "total_tokens": 999
+    },
+    "error": null,
+    "calls": 1,
+    "mode": "model"
+  },
+  "confirmation_persisted": true,
+  "delivery_state": "completed",
+  "replay_same_receipt": true,
+  "simulated_remote_post_count": 1,
+  "approval": "simulated-independent-reviewer",
+  "servicenow": "mock-transport",
+  "model": "real-official-deepseek-api"
+}

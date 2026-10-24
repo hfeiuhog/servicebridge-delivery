@@ -3,6 +3,7 @@
 import argparse
 import json
 from pathlib import Path
+
 from lfx.components.enterprise_delivery.contracts import issue_grant
 
 parser = argparse.ArgumentParser()

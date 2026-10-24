@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ServiceBridge 工单整理与审批演示</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#202936;font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif}
+main{max-width:1120px;margin:36px auto;padding:0 22px}h1{font-size:28px;margin-bottom:5px}h2{font-size:19px;margin-top:0}
+.muted{color:#526171}.notice{padding:14px 18px;background:#e8eff7;border-radius:10px;margin:22px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+section{background:white;border:1px solid #dce2e9;border-radius:12px;padding:22px;margin-bottom:20px}label{display:block;font-weight:600;margin:12px 0 5px}
+input,textarea,select{font:inherit;width:100%;padding:9px 11px;border:1px solid #b9c4d1;border-radius:6px;background:#fff;color:inherit}textarea{resize:vertical;min-height:90px}
+button{font:inherit;border:1px solid #315b83;background:#315b83;color:white;padding:9px 14px;border-radius:6px;cursor:pointer;margin:12px 7px 0 0}button.secondary{background:white;color:#315b83}button:disabled{opacity:.45;cursor:wait}
+.status{white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;background:#f1f4f7;border-radius:6px}.error{color:#a02424}.fact{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.fact input{font-size:13px;min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}.actions{display:flex;flex-wrap:wrap;align-items:end;gap:8px}.actions select{width:240px}.small{font-size:13px}section{min-width:0}
+@media(max-width:760px){.grid{grid-template-columns:1fr}main{margin:20px auto}.fact{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<h1>ServiceBridge 工单整理与审批演示</h1>
+<p class="muted">从原始描述整理候选，核对内容后审批，并查看执行结果。</p>
+<div class="notice" id="mode">本地演示：审批身份与外部工单系统均为模拟，不会创建真实客户工单。请只使用合成数据。</div>
+<div class="grid">
+<section><h2>1 录入原始描述</h2>
+<textarea id="source" rows="8">设备 SYN-A001 反复报E11，重启2次未恢复，影响2名前台人员无法收款，暂无替代设备。</textarea>
+<p class="small muted">补充信息请直接加入原文，再重新生成。候选修订会使旧确认失效。</p>
+<button onclick="generate(false)">生成新候选</button><button class="secondary" onclick="generate(true)">补充原文并重新生成</button>
+<label>待补充信息</label><div class="status" id="missing">尚未生成候选。</div>
+<label>本轮状态</label><div class="status" id="status">等待输入。</div>
+</section>
+<section><h2>2 核对并确认内容</h2>
+<label for="summary">标题</label><input id="summary" maxlength="160">
+<label for="detail">描述</label><textarea id="detail" rows="4" maxlength="4000"></textarea>
+<label for="urgency">人工确认紧急程度</label><select id="urgency"><option value="">请选择</option><option value="1">1 高</option><option value="2">2 中</option><option value="3">3 低</option></select>
+<p class="small muted">左侧填写事实，右侧保留支持该事实的原文片段。引用存在仍需人工核对含义。</p>
+<div id="facts"></div>
+<button onclick="confirmContent()">确认当前内容</button>
+</section></div>
+<section><h2>3 预演 审批与执行</h2>
+<p class="muted">先保存预演，再以模拟独立审批人批准。执行异常时先核对结果。</p>
+<div class="actions"><button onclick="prepare()">保存预演</button><button onclick="approve()">以演示审批人批准</button>
+<select id="scenario"><option value="success">正常返回回执</option><option value="post-timeout">模拟创建成功但响应丢失</option></select>
+<button onclick="deliver()">执行模拟写回</button><button class="secondary" onclick="reconcile()">核对不确定结果</button></div>
+<div id="execution" class="status" style="margin-top:18px">尚未创建预演。</div>
+</section>
+<details><summary>查看本轮候选与演示记录</summary><pre id="record"></pre></details>
+</main>
+<script>
+const token='__DEMO_TOKEN__';
+const names={asset_ref:'设备或服务',symptom:'故障现象',attempted_action:'已尝试操作',business_impact:'业务影响',workaround:'替代办法'};
+const facts=document.getElementById('facts');let draft=null,proposal=null,grant=null;
+for(const [key,label] of Object.entries(names)){const title=document.createElement('label');title.htmlFor='fact-'+key;title.textContent=label;const row=document.createElement('div');row.className='fact';const a=document.createElement('input');a.id='fact-'+key;a.placeholder=label;const b=document.createElement('input');b.id='quote-'+key;b.placeholder='对应原文片段';b.setAttribute('aria-label',label+'的原文引用');row.append(a,b);facts.append(title,row);}
+function show(id,value,error=false){const el=document.getElementById(id);el.textContent=typeof value==='string'?value:JSON.stringify(value,null,2);el.classList.toggle('error',error);}
+async function api(path,value){const response=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-Demo-Token':token},body:JSON.stringify(value)});const result=await response.json();if(!response.ok)throw new Error(result.error||JSON.stringify(result.detail));return result;}
+async function work(action){document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await action();}catch(e){show('status',e.message,true);}finally{document.querySelectorAll('button').forEach(b=>b.disabled=false);}}
+function render(record){draft=record;document.getElementById('summary').value=record.candidate.summary||'';document.getElementById('detail').value=record.candidate.detail||'';for(const key of Object.keys(names)){document.getElementById('fact-'+key).value=record.candidate.facts[key]||'';const quotes=record.candidate.evidence.filter(e=>e.field===key);document.getElementById('quote-'+key).value=quotes.length?quotes[0].quote:'';}show('missing',record.questions.length?record.questions.join('\n'):'必需事实已提供，请继续核对内容并选择紧急程度。');show('status','候选版本 '+record.revision+' · '+record.state+(record.model_run.error?' · 模型未完成，可人工填写或重新生成。':''));show('record',record);}
+function generate(revise){return work(async()=>{if(revise&&!draft)throw new Error('请先生成候选。');const value={source:document.getElementById('source').value};if(revise){value.draft_id=draft.id;value.revision=draft.revision;}const result=await api('intake',value);proposal=null;grant=null;render(result);show('execution','尚未创建预演。');});}
+function finalCandidate(){const values={},evidence=[];for(const key of Object.keys(names)){values[key]=document.getElementById('fact-'+key).value.trim()||null;const quote=document.getElementById('quote-'+key).value.trim();if(values[key]&&quote)evidence.push({field:key,quote});}return {summary:document.getElementById('summary').value.trim()||null,detail:document.getElementById('detail').value.trim()||null,facts:values,evidence};}
+function confirmContent(){return work(async()=>{if(!draft)throw new Error('请先生成候选。');const urgency=Number(document.getElementById('urgency').value);if(!urgency)throw new Error('请选择人工确认的紧急程度。');const result=await api('confirm',{draft_id:draft.id,revision:draft.revision,final_content:{candidate:finalCandidate(),urgency}});proposal=null;grant=null;render(result);show('status','内容已确认 · 版本 '+result.revision+'。现在可以保存预演。');});}
+function prepare(){return work(async()=>{if(!draft||!draft.confirmation_id)throw new Error('请先确认当前内容。');proposal=await api('prepare',{confirmation_id:draft.confirmation_id});show('execution','预演已保存，尚未外部写入。请以演示审批人批准。');show('record',proposal);});}
+function approve(){return work(async()=>{if(!proposal)throw new Error('请先保存预演。');const result=await api('approve',{digest:proposal.change.digest});grant=result.grant;show('execution','已由模拟独立审批人批准这份最终内容。');});}
+function deliver(){return work(async()=>{if(!proposal||!grant)throw new Error('请先完成预演和独立审批。');try{const result=await api('deliver',{digest:proposal.change.digest,grant,scenario:document.getElementById('scenario').value});show('execution',result);show('status','模拟写回已完成，可核对回执。');}catch(e){show('execution','执行未完成。若为响应丢失场景，状态将保留 uncertain，请先核对结果。',true);throw e;}});}
+function reconcile(){return work(async()=>{if(!proposal)throw new Error('请先保存预演。');show('execution',await api('reconcile',{digest:proposal.change.digest}));});}
+fetch('/api/config').then(r=>r.json()).then(c=>{document.getElementById('mode').textContent='本地演示 · 内容整理：'+(c.model_mode==='rules-offline'?'离线规则，不代表 LLM 效果':'DeepSeek Flash 真实模型调用')+'。审批身份和 ServiceNow 均为模拟，不会创建真实客户工单。请只使用合成数据。';});
+</script></body></html>

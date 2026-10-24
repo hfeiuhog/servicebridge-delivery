@@ -1,0 +1,16 @@
+{
+  "mode": "rules-offline",
+  "flowCompleted": true,
+  "missingBlocked": "Review and supply the required facts, title and detail before confirmation",
+  "consoleErrors": [],
+  "horizontalOverflow": false,
+  "mobileHorizontalOverflow": false,
+  "desktop": [
+    1440,
+    1100
+  ],
+  "mobile": [
+    390,
+    844
+  ]
+}

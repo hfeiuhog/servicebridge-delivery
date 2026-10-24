@@ -1,0 +1,30 @@
+{
+  "mode": "deepseek",
+  "model": "deepseek-flash",
+  "created_at": "2026-10-24T08:52:36.502934+00:00",
+  "split": "holdout",
+  "cases": 12,
+  "dataset_sha256": "6f443adbf9d8f393c93f2a1492c3c5e110020cd10c48fce17becd81573a750f7",
+  "contract_pass": 12,
+  "missing_set_matches": 8,
+  "fact_presence_matches": 55,
+  "fact_presence_total": 60,
+  "anchor_hits": 40,
+  "anchor_total": 45,
+  "latency_ms_median": 2252.896,
+  "latency_ms_max": 2444.317,
+  "total_tokens": 11907,
+  "human_time_measured": false,
+  "limitations": [
+    "Synthetic inputs only",
+    "Anchors and presence are automated proxies, not semantic accuracy",
+    "No real ServiceNow calls or customer ROI measurement",
+    "Model alias can change"
+  ],
+  "implementation_sha256": {
+    "candidate_contracts.py": "b7517a98c0825f570e01f2d42d75ffe633f82dc506a2478c49f5a031befb68f9",
+    "candidate_model.py": "e33f3d3328849358da7c48e373813518c85fe4f5edc078212d12c1ba46cddfa2",
+    "deepseek_model.py": "8642f3899060eb18f8b67c7b6045a0137ba070127ceee6e8bcbdea90d3190582",
+    "intake_rules.py": "0a22ca422e528aae97bf4f9e770bd40db9053c92b1f62868fc88358c403f322a"
+  }
+}
