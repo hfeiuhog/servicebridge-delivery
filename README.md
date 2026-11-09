@@ -89,3 +89,12 @@ uv run --no-project python enterprise/demo.py --database enterprise/.local/deeps
 ## 归属与许可
 
 新增实现使用 AI 辅助。上游平台属于 Langflow 与其贡献者，保留 MIT LICENSE、历史和 [原始 README](README.upstream.md)。新增贡献以 [固定基线](enterprise/UPSTREAM.json) 后的 diff 为准。不宣称真实客户上线或独立开发上游平台。
+
+## 开放协作
+
+本仓库公开，欢迎 Clone、Fork、反馈问题和提交改进。
+请将本扩展的 PR 提交到 **`hfeiuhog/servicebridge-delivery` 的 `enterprise` 分支**。
+
+[报告问题 / 功能建议](https://github.com/hfeiuhog/servicebridge-delivery/issues/new/choose) · [贡献指南](CONTRIBUTING.md) · [同步说明](enterprise/COLLABORATION.md)
+
+上游基础能力与贡献者署名继续保留。本 fork 的提交、测试和扩展代码可供核对；上游是否接受贡献以对应 PR 的审核结果为准。

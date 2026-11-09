@@ -1,6 +1,9 @@
 name: Enterprise extension CI
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [enterprise]
+    paths: ['enterprise/**', 'src/lfx/src/lfx/components/enterprise_delivery/**', 'src/lfx/src/lfx/components/__init__.py', '.github/workflows/enterprise-ci.yml']
   push:
     branches: [enterprise]
     paths: ['enterprise/**', 'src/lfx/src/lfx/components/enterprise_delivery/**', 'src/lfx/src/lfx/components/__init__.py', '.github/workflows/enterprise-ci.yml']

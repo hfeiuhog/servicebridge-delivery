@@ -1,0 +1,25 @@
+name: Extension bug report
+description: Report a reproducible problem in this fork's extension.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic examples. Remove credentials, customer records, and private documents."
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the branch, commit, commands, and a small synthetic example.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and redacted logs
+      description: Include relevant runtime and database versions.
